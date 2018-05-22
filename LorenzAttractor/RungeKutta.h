@@ -17,6 +17,7 @@ public:
 	void ReplaceFunc(std::function<double(double, double)> newFunc);
 	std::tuple<double, double> Run(const double time, const double position);
 	std::tuple<double, double> Run(std::tuple<double, double> nowValue);
+	std::tuple<double, double> ReplaceAndRun(std::function<double(double, double)> newFunc, std::tuple<double, double> nowValue);
 	Trajectory GetRecord();
 	Trajectory Fit(const double initialPosition, const int iterateNum = 100000000);
 };

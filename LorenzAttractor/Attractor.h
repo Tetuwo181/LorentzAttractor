@@ -3,17 +3,19 @@
 #include<functional>
 #include "RungeKutta.h"
 
-
-class LorentsTrajectory {
+class LorentsTrajectory{
 private:
-	Trajectory x;
-	Trajectory y;
-	Trajectory z;
+	std::vector<double> x;
+	std::vector<double> y;
+	std::vector<double> z;
+	std::vector<double> time;
 public:
-	LorentsTrajectory(const Trajectory resultX, const Trajectory resultY, const Trajectory resultZ);
-	Trajectory X();
-	Trajectory Y();
-	Trajectory Z();
+	LorentsTrajectory(Trajectory resultX, Trajectory resultY, Trajectory resultZ);
+	~LorentsTrajectory();
+	std::vector<double> X();
+	std::vector<double> Y();
+	std::vector<double> Z();
+	std::vector<double> Time();
 };
 
 class Attractor

@@ -1,31 +1,36 @@
 #include "Attractor.h"
 
-using namespace std::placeholders;
-
-
-
-LorentsTrajectory::LorentsTrajectory(const Trajectory resultX, const Trajectory resultY, const Trajectory resultZ)
+LorentsTrajectory::LorentsTrajectory(Trajectory resultX, Trajectory resultY, Trajectory resultZ)
 {
-	x = resultX;
-	y = resultY;
-	z = resultZ;
+	x = resultX.GetTrajectory();
+	y = resultY.GetTrajectory();
+	z = resultZ.GetTrajectory();
+	time = resultX.GetTimeRecord();
 }
 
-Trajectory LorentsTrajectory::X()
+LorentsTrajectory::~LorentsTrajectory()
 {
-	return Trajectory();
 }
 
-Trajectory LorentsTrajectory::Y()
+std::vector<double> LorentsTrajectory::X()
 {
-	return Trajectory();
+	return x;
 }
 
-Trajectory LorentsTrajectory::Z()
+std::vector<double> LorentsTrajectory::Y()
 {
-	return Trajectory();
+	return y;
 }
 
+std::vector<double> LorentsTrajectory::Z()
+{
+	return z;
+}
+
+std::vector<double>LorentsTrajectory::Time()
+{
+	return time;
+}
 
 Attractor::Attractor(const double pBase, const double bBase, const double rBase, const double timeWidth)
 {
@@ -71,9 +76,23 @@ std::function<double(double, double)> Attractor::DzDt(const double x, const doub
 
 LorentsTrajectory Attractor::Fit(const double initXBase, const double initYBase, const double initZBase, const int iterateNum)
 {
-	auto xFunc = RungeKutta(DxDt(initYBase, initZBase), initXBase, width);
-	auto yFunc = RungeKutta(DxDt(initXBase, initZBase), initYBase, width);
-	auto zFunc = RungeKutta(DxDt(initYBase, initYBase), initYBase, width);
+
+	RungeKutta xFunc(DxDt(initYBase, initZBase), initXBase, width);
+	RungeKutta yFunc(DxDt(initXBase, initZBase), initYBase, width);
+	RungeKutta zFunc(DxDt(initYBase, initYBase), initYBase, width);
+	auto nowXValue = xFunc.Run(0, initXBase);
+	auto nowYValue = yFunc.Run(0, initYBase);
+	auto nowZValue = zFunc.Run(0, initZBase);
+
+	for (auto iteration = 0; iteration < iterateNum; iteration++) {
+		auto nextXValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowYValue), std::get<1>(nowZValue)), nowXValue);
+		auto nextYValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowXValue), std::get<1>(nowZValue)), nowYValue);
+		auto nextZValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowXValue), std::get<1>(nowYValue)), nowZValue);
+		nowXValue = nextXValue;
+		nowYValue = nextYValue;
+		nowZValue = nextZValue;
+	}
+	return LorentsTrajectory(xFunc.GetRecord(), yFunc.GetRecord(), zFunc.GetRecord());
 }
 
 

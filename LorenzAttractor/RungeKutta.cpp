@@ -34,7 +34,7 @@ std::tuple<double, double> RungeKutta::Run(const double time, const double posit
 	auto nextPosition = position + (k1 + k2 + k3 + k4)*(width / 6.0);
 	auto nextTime = time + width;
 	auto newValue = std::make_tuple(nextTime, nextPosition);
-	recorder.appendPos(newValue);
+	recorder.AppendPos(newValue);
 	return newValue;
 }
 
@@ -43,6 +43,12 @@ std::tuple<double, double> RungeKutta::Run(std::tuple<double, double> nowValue)
 	auto nowTime = std::get<0>(nowValue);
 	auto nowPos = std::get<1>(nowValue);
 	return Run(nowTime, nowPos);
+}
+
+std::tuple<double, double> RungeKutta::ReplaceAndRun(std::function<double(double, double)> newFunc, std::tuple<double, double> nowValue)
+{
+	ReplaceFunc(newFunc);
+	return Run(nowValue);
 }
 
 Trajectory RungeKutta::GetRecord()
@@ -54,7 +60,7 @@ Trajectory RungeKutta::Fit(const double initialPosition, const int iterateNum)
 {
 	for (auto iteration = 0; iteration < iterateNum; iteration++) {
 		auto nextValue = Run(recorder.NowPosition());
-		recorder.appendPos(nextValue);
+		recorder.AppendPos(nextValue);
 	}
 	return recorder;
 }
