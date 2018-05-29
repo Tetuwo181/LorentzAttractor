@@ -4,11 +4,12 @@
 #include "RungeKutta.h"
 
 
-RungeKutta::RungeKutta(const std::function<double(double, double)> base, double initialPosition, double initialIime, const double baseWidth)
+RungeKutta::RungeKutta(const std::function<double(double, double)> base,
+					   const double initialPosition,
+	                   const double initialIime,
+	                   const double baseWidth):width(baseWidth)
 {
 	baseFunc = base;
-	width = baseWidth;
-	initPos = initialPosition;
 	recorder = Trajectory(initialPosition, initialIime);
 }
 
@@ -21,13 +22,12 @@ void RungeKutta::ReplaceFunc(std::function<double(double, double)> newFunc)
 	baseFunc = newFunc;
 }
 
+/*
+現在の時間の入力から次の時間の入力の値を近似して算出する
+古典的なやり方、4次精度の近似値を出す
+*/
 std::tuple<double, double> RungeKutta::Run(const double time, const double position)
 {
-	/*
-	現在の時間の入力から次の時間の入力の値を近似して算出する
-	古典的なやり方、4次精度の近似値を出す
-	*/
-
 	auto k1 = baseFunc(time, position);
 	auto k2 = baseFunc(time + (width/2.0), position + (width/2.0*k1));
 	auto k3 = baseFunc(time + (width/2.0), position + (width/2.0*k2));
@@ -56,6 +56,7 @@ Trajectory RungeKutta::GetRecord()
 {
 	return recorder;
 }
+
 
 Trajectory RungeKutta::Fit(const int iterateNum)
 {

@@ -39,7 +39,6 @@ void Trajectory::AppendPos(std::tuple<double, double> nowValue)
 	AppendPos(nextTime, nextPos);
 }
 
-
 std::tuple<double, double> Trajectory::FirstPosition()
 {
 	return std::make_tuple(time[0], trajectory[0]);
@@ -48,6 +47,27 @@ std::tuple<double, double> Trajectory::FirstPosition()
 std::tuple<double, double> Trajectory::NowPosition()
 {
 	return std::make_tuple(time.back(), trajectory.back());
+}
+
+
+/*
+“ü—Í‚µ‚½ŠÔ‚©‚çˆê”Ô‹ß‚¢ŠÔ‚Ì
+À•W‚ğ’T‚·
+*/
+std::tuple<double, double> Trajectory::SearchPositionByTime(const double searchTime)
+{
+	auto position = trajectory[0];
+	auto dtime = abs(searchTime - time[0]);
+	auto nearstTime = time[0];
+	for (auto index = 0; index < time.size(); index++) {
+		auto nowDtime = abs(searchTime - time[index]);
+		if (nowDtime < dtime) {
+			dtime = nowDtime;
+			position = trajectory[index];
+			nearstTime = time[index];
+		}
+	}
+	return std::make_tuple(nearstTime, position);
 }
 
 std::vector<double> Trajectory::GetTrajectory()
