@@ -35,12 +35,8 @@ std::vector<double>LorentsTrajectory::Time()
 	return time;
 }
 
-Attractor::Attractor(const double pBase, const double bBase, const double rBase, const double timeWidth)
+Attractor::Attractor(const double pBase, const double bBase, const double rBase, const double timeWidth):p(pBase), b(bBase), r(rBase), width(timeWidth)
 {
-	p = pBase;
-	b = bBase;
-	r = rBase;
-	width = timeWidth;
 }
 
 Attractor::~Attractor()
@@ -64,33 +60,33 @@ double Attractor::DzDtBase(const double t, const double x, const double y, const
 
 std::function<double(double, double)> Attractor::DxDt(const double y, const double z)
 {
-	return [&](double t, double x) {return DxDtBase(t, x, y, z);};
+	return [=](double t, double x)  {return DxDtBase(t, x, y, z);};
 }
 
 std::function<double(double, double)> Attractor::DyDt(const double x, const double z)
 {
-	return [&](double t, double y) {return DyDtBase(t, x, y, z);};
+	return [=](double t, double y)  {return DyDtBase(t, x, y, z);};
 }
 
 std::function<double(double, double)> Attractor::DzDt(const double x, const double y)
 {
-	return [&](double t, double z) {return DzDtBase(t, x, y, z);};
+	return [=](double t, double z) {return DzDtBase(t, x, y, z);};
 }
 
 LorentsTrajectory Attractor::Fit(const double initXBase, const double initYBase, const double initZBase, const int iterateNum)
 {
 
 	RungeKutta xFunc(DxDt(initYBase, initZBase), initXBase, width);
-	RungeKutta yFunc(DxDt(initXBase, initZBase), initYBase, width);
-	RungeKutta zFunc(DxDt(initYBase, initYBase), initYBase, width);
+	RungeKutta yFunc(DyDt(initXBase, initZBase), initYBase, width);
+	RungeKutta zFunc(DzDt(initXBase, initYBase), initYBase, width);
 	auto nowXValue = xFunc.Run(0, initXBase);
 	auto nowYValue = yFunc.Run(0, initYBase);
 	auto nowZValue = zFunc.Run(0, initZBase);
 
 	for (auto iteration = 0; iteration < iterateNum; iteration++) {
 		auto nextXValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowYValue), std::get<1>(nowZValue)), nowXValue);
-		auto nextYValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowXValue), std::get<1>(nowZValue)), nowYValue);
-		auto nextZValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowXValue), std::get<1>(nowYValue)), nowZValue);
+		auto nextYValue = yFunc.ReplaceAndRun(DyDt(std::get<1>(nowXValue), std::get<1>(nowZValue)), nowYValue);
+		auto nextZValue = zFunc.ReplaceAndRun(DzDt(std::get<1>(nowXValue), std::get<1>(nowYValue)), nowZValue);
 		nowXValue = nextXValue;
 		nowYValue = nextYValue;
 		nowZValue = nextZValue;
@@ -109,6 +105,7 @@ PYBIND11_MODULE(LorenzAttractor, m)
 		.def("append_pos", (void (Trajectory::*)(std::tuple<double, double>)) &Trajectory::AppendPos)
 		.def("first_position", &Trajectory::FirstPosition)
 		.def("now_position", &Trajectory::NowPosition)
+		.def("search_position_by_time", &Trajectory::SearchPositionByTime)
 		.def("get_trajectory", &Trajectory::GetTrajectory)
 		.def("get_time", &Trajectory::GetTimeRecord);
 

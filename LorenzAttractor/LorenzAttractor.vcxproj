@@ -92,10 +92,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\hamak\source\repos\LorenzAttractor\RungeKutta;C:\Users\hamak\source\repos\LorenzAttractor\LorenzAttractor\RungeKutta\RungeKutta;C:\Users\hamak\Miniconda3\envs\LorentzAttractor\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\Users\hamak\source\repos\LorenzAttractor\RungeKutta;C:\Users\hamak\Miniconda3\envs\LorentzAttractor\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

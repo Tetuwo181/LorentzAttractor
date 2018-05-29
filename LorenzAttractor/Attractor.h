@@ -21,10 +21,10 @@ public:
 class Attractor
 {
 private:
-	double p;
-	double b;
-	double r;
-	double width;
+	const double p;
+	const double b;
+	const double r;
+	const double width;
 public:
 	Attractor(const double pBase = 0.0, const double bBase = 0.0, const double rBase = 0.0, const double timeWidth = 0.0001);
 	~Attractor();
