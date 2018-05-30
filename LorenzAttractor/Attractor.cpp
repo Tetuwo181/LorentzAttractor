@@ -3,7 +3,30 @@
 #include <pybind11/functional.h>
 #include "Attractor.h"
 
-LorentsTrajectory::LorentsTrajectory(Trajectory resultX, Trajectory resultY, Trajectory resultZ)
+template<typename T>
+std::vector<T> DecimateVector(std::vector<T> baseVector, const uint64_t space = 0) {
+	if (space == 0) {
+		return baseVector;
+	}
+	std::vector<T> decimated{ baseVector[0] };
+	for (auto index = 1; index < baseVector.size(); index ++ ) {
+		if ((index%space) == 0) {
+			decimated.push_back(baseVector[index]);
+		}
+	}
+	return decimated;
+}
+
+std::function<uint64_t(uint64_t)> CheckSpace(const uint64_t space) {
+	if (space == 0) {
+		return [](uint64_t iteration) {return true;};
+	}
+	else {
+		return [space](uint64_t iteration) {return (iteration%space) == 0;};
+	}
+}
+
+LorenzTrajectory::LorenzTrajectory(Trajectory resultX, Trajectory resultY, Trajectory resultZ)
 {
 	x = resultX.GetTrajectory();
 	y = resultY.GetTrajectory();
@@ -11,31 +34,48 @@ LorentsTrajectory::LorentsTrajectory(Trajectory resultX, Trajectory resultY, Tra
 	time = resultX.GetTimeRecord();
 }
 
-LorentsTrajectory::~LorentsTrajectory()
+LorenzTrajectory::LorenzTrajectory(std::vector<double> resultX, std::vector<double> resultY, std::vector<double> resultZ, std::vector<double> resultTime)
+{
+	x = resultX;
+	y = resultY;
+	z = resultZ;
+	time = resultTime;
+}
+
+LorenzTrajectory::~LorenzTrajectory()
 {
 }
 
-std::vector<double> LorentsTrajectory::X()
+std::vector<double> LorenzTrajectory::X(const uint64_t space)
 {
-	return x;
+	return DecimateVector(x, space);
 }
 
-std::vector<double> LorentsTrajectory::Y()
+std::vector<double> LorenzTrajectory::Y(const uint64_t space)
 {
-	return y;
+	return DecimateVector(y, space);
 }
 
-std::vector<double> LorentsTrajectory::Z()
+std::vector<double> LorenzTrajectory::Z(const uint64_t space)
 {
-	return z;
+	return DecimateVector(z, space);
 }
 
-std::vector<double>LorentsTrajectory::Time()
+std::vector<double>LorenzTrajectory::Time(const uint64_t space)
 {
-	return time;
+	return DecimateVector(time, space);
 }
 
-Attractor::Attractor(const double pBase, const double bBase, const double rBase, const double timeWidth):p(pBase), b(bBase), r(rBase), width(timeWidth)
+LorenzTrajectory LorenzTrajectory::GetDecimatedTrajectory(const uint64_t space)
+{
+	auto decimatedX = X(space);
+	auto decimatedY = Y(space);
+	auto decimatedZ = Z(space);
+	auto decimatedTime = Time(space);
+	return LorenzTrajectory(decimatedX, decimatedY, decimatedZ, decimatedTime);
+}
+
+Attractor::Attractor(const double pBase, const double rBase, const double bBase, const double timeWidth):p(pBase), r(rBase), b(bBase), width(timeWidth)
 {
 }
 
@@ -73,32 +113,34 @@ std::function<double(double, double)> Attractor::DzDt(const double x, const doub
 	return [=](double t, double z) {return DzDtBase(t, x, y, z);};
 }
 
-LorentsTrajectory Attractor::Fit(const double initXBase, const double initYBase, const double initZBase, const int iterateNum)
-{
 
+LorenzTrajectory Attractor::Fit(const double initXBase, const double initYBase, const double initZBase, const uint64_t iterateNum, const uint64_t recordSpace)
+{
 	RungeKutta xFunc(DxDt(initYBase, initZBase), initXBase, width);
 	RungeKutta yFunc(DyDt(initXBase, initZBase), initYBase, width);
-	RungeKutta zFunc(DzDt(initXBase, initYBase), initYBase, width);
+	RungeKutta zFunc(DzDt(initXBase, initYBase), initZBase, width);
 	auto nowXValue = xFunc.Run(0, initXBase);
 	auto nowYValue = yFunc.Run(0, initYBase);
 	auto nowZValue = zFunc.Run(0, initZBase);
-
+	auto recordChecker = CheckSpace(recordSpace);
 	for (auto iteration = 0; iteration < iterateNum; iteration++) {
-		auto nextXValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowYValue), std::get<1>(nowZValue)), nowXValue);
-		auto nextYValue = yFunc.ReplaceAndRun(DyDt(std::get<1>(nowXValue), std::get<1>(nowZValue)), nowYValue);
-		auto nextZValue = zFunc.ReplaceAndRun(DzDt(std::get<1>(nowXValue), std::get<1>(nowYValue)), nowZValue);
+		auto willRecord = recordChecker(iteration);
+		auto nextXValue = xFunc.ReplaceAndRun(DxDt(std::get<1>(nowYValue), std::get<1>(nowZValue)), nowXValue, willRecord);
+		auto nextYValue = yFunc.ReplaceAndRun(DyDt(std::get<1>(nowXValue), std::get<1>(nowZValue)), nowYValue, willRecord);
+		auto nextZValue = zFunc.ReplaceAndRun(DzDt(std::get<1>(nowXValue), std::get<1>(nowYValue)), nowZValue, willRecord);
 		nowXValue = nextXValue;
 		nowYValue = nextYValue;
 		nowZValue = nextZValue;
 	}
-	return LorentsTrajectory(xFunc.GetRecord(), yFunc.GetRecord(), zFunc.GetRecord());
+	return LorenzTrajectory(xFunc.GetRecord(), yFunc.GetRecord(), zFunc.GetRecord());
 }
 
 
 namespace py = pybind11;
 PYBIND11_MODULE(LorenzAttractor, m)
 {
-	m.doc() = "record trajectory";
+	m.doc() = "record trajectory of lorenz attractor";
+
 	py::class_<Trajectory>(m, "Trajectory")
 		.def(py::init<double, double>())
 		.def("append_pos", (void (Trajectory::*)(double, double)) &Trajectory::AppendPos)
@@ -112,18 +154,23 @@ PYBIND11_MODULE(LorenzAttractor, m)
 	py::class_<RungeKutta>(m, "RungeKutta")
 		.def(py::init<std::function<double(double, double)>, const double, const double, const double>())
 		.def("replace_func", &RungeKutta::ReplaceFunc)
-		.def("run", (std::tuple<double, double>(RungeKutta::*)(double, double)) &RungeKutta::Run)
-		.def("run", (std::tuple<double, double>(RungeKutta::*)(std::tuple<double, double>)) &RungeKutta::Run)
+		.def("run", (std::tuple<double, double>(RungeKutta::*)(double, double, bool)) &RungeKutta::Run)
+		.def("run", (std::tuple<double, double>(RungeKutta::*)(std::tuple<double, double>, bool)) &RungeKutta::Run)
 		.def("replace_and_run", &RungeKutta::ReplaceAndRun)
 		.def("get_record", &RungeKutta::GetRecord)
 		.def("fit", &RungeKutta::Fit);
 
-	py::class_<LorentsTrajectory>(m, "LorentsTrajectory")
+
+	py::class_<LorenzTrajectory>(m, "LorentsTrajectory")
 		.def(py::init<Trajectory, Trajectory, Trajectory>())
-		.def("x", &LorentsTrajectory::X)
-		.def("y", &LorentsTrajectory::Y)
-		.def("z", &LorentsTrajectory::Z)
-		.def("time", &LorentsTrajectory::Time);
+		.def(py::init <std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>> ())
+		.def("x", &LorenzTrajectory::X)
+		.def("y", &LorenzTrajectory::Y)
+		.def("z", &LorenzTrajectory::Z)
+		.def("time", &LorenzTrajectory::Time)
+		.def("get_decimated_trajectory", &LorenzTrajectory::GetDecimatedTrajectory);
+
+
 
 	py::class_<Attractor>(m, "Attractor")
 		.def(py::init<const double, const double, const double, const double>())
