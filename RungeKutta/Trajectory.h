@@ -25,5 +25,6 @@ public:
 	std::tuple<double, double> SearchPositionByTime(const double searchTime);
 	std::vector<double> GetTrajectory();
 	std::vector<double> GetTimeRecord();
+	Trajectory GetDecimatedTrajectory(const uint64_t space);
 };
 

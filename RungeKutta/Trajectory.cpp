@@ -80,3 +80,14 @@ std::vector<double> Trajectory::GetTimeRecord()
 	return time;
 }
 
+Trajectory Trajectory::GetDecimatedTrajectory(const uint64_t space)
+{
+	Trajectory newTrajectory(time[0], trajectory[0]);
+	for (auto index = 1; index < trajectory.size(); index++) {
+		if ((index%space) == 0) {
+			newTrajectory.AppendPos(time[index], trajectory[index]);
+		}
+	}
+	return newTrajectory;
+}
+
